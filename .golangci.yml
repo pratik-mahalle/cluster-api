@@ -23,6 +23,7 @@ linters:
     - ginkgolinter # ginkgo and gomega
     - gocritic # bugs, performance, style (we could add custom ones to this one)
     - godot # checks that comments end in a period
+    - godox # block FIXMEs
     - goprintffuncname # printft-like functions should be named with f at the end
     - gosec # potential security problems
     - govet # basically 'go vet'
@@ -83,6 +84,9 @@ linters:
         - ^ \+.*
         - ^ ANCHOR.*
         - '^ (alpha|beta|GA): v.*'
+    godox:
+      keywords:
+        - FIXME # FIXME's should be removed before merging PRs
     gosec:
       excludes:
       # integer overflow conversion int -> int32
@@ -269,10 +273,6 @@ linters:
       - linters:
           - staticcheck
         text: 'SA1019: .*(res|result|i|j)\.Requeue is deprecated: Use `RequeueAfter` instead'
-      # CR v0.22 deprecated client.Apply, will be fixed via: https://github.com/kubernetes-sigs/cluster-api/issues/12695
-      - linters:
-          - staticcheck
-        text: 'SA1019: client.Apply is deprecated: Use client.Client.Apply'
       # TODO: var-naming: avoid meaningless package names by revive
       #   * test/infrastructure/docker/internal/docker/types/
       #   * bootstrap/kubeadm/types/

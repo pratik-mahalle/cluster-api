@@ -25,6 +25,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -304,9 +305,9 @@ func (r *KubeadmControlPlaneReconciler) generateKubeadmConfig(ctx context.Contex
 }
 
 // updateExternalObject updates the external object with the labels and annotations from KCP.
-func (r *KubeadmControlPlaneReconciler) updateExternalObject(ctx context.Context, obj client.Object, kcp *controlplanev1.KubeadmControlPlane, cluster *clusterv1.Cluster) error {
+func (r *KubeadmControlPlaneReconciler) updateExternalObject(ctx context.Context, obj client.Object, objGVK schema.GroupVersionKind, kcp *controlplanev1.KubeadmControlPlane, cluster *clusterv1.Cluster) error {
 	updatedObject := &unstructured.Unstructured{}
-	updatedObject.SetGroupVersionKind(obj.GetObjectKind().GroupVersionKind())
+	updatedObject.SetGroupVersionKind(objGVK)
 	updatedObject.SetNamespace(obj.GetNamespace())
 	updatedObject.SetName(obj.GetName())
 	// Set the UID to ensure that Server-Side-Apply only performs an update
@@ -347,6 +348,12 @@ func (r *KubeadmControlPlaneReconciler) updateMachine(ctx context.Context, machi
 	return updatedMachine, nil
 }
 
+// kubeadmClusterConfigurationAnnotation is an annotation that was set in Cluster API <= v1.11.
+// Starting with Cluster API v1.12 we remove it from existing Machines.
+//
+// Deprecated: This constant and corresponding cleanup code can be removed once we don't support upgrades from Cluster API v1.12 anymore.
+const kubeadmClusterConfigurationAnnotation = "controlplane.cluster.x-k8s.io/kubeadm-cluster-configuration"
+
 // computeDesiredMachine computes the desired Machine.
 // This Machine will be used during reconciliation to:
 // * create a new Machine
@@ -376,15 +383,6 @@ func (r *KubeadmControlPlaneReconciler) computeDesiredMachine(kcp *controlplanev
 		machineName = generatedMachineName
 		version = kcp.Spec.Version
 
-		// Machine's bootstrap config may be missing ClusterConfiguration if it is not the first machine in the control plane.
-		// We store ClusterConfiguration as annotation here to detect any changes in KCP ClusterConfiguration and rollout the machine if any.
-		// Nb. This annotation is read when comparing the KubeadmConfig to check if a machine needs to be rolled out.
-		clusterConfigurationAnnotation, err := internal.ClusterConfigurationToMachineAnnotationValue(&kcp.Spec.KubeadmConfigSpec.ClusterConfiguration)
-		if err != nil {
-			return nil, err
-		}
-		annotations[controlplanev1.KubeadmClusterConfigurationAnnotation] = clusterConfigurationAnnotation
-
 		// In case this machine is being created as a consequence of a remediation, then add an annotation
 		// tracking remediating data.
 		// NOTE: This is required in order to track remediation retries.
@@ -397,24 +395,8 @@ func (r *KubeadmControlPlaneReconciler) computeDesiredMachine(kcp *controlplanev
 		machineUID = existingMachine.UID
 		version = existingMachine.Spec.Version
 
-		// For existing machine only set the ClusterConfiguration annotation if the machine already has it.
-		// We should not add the annotation if it was missing in the first place because we do not have enough
-		// information.
-		if clusterConfigurationAnnotation, ok := existingMachine.Annotations[controlplanev1.KubeadmClusterConfigurationAnnotation]; ok {
-			// In case the annotation is outdated, update it.
-			if internal.ClusterConfigurationAnnotationFromMachineIsOutdated(clusterConfigurationAnnotation) {
-				clusterConfiguration, err := internal.ClusterConfigurationFromMachine(existingMachine)
-				if err != nil {
-					return nil, err
-				}
-
-				clusterConfigurationAnnotation, err = internal.ClusterConfigurationToMachineAnnotationValue(clusterConfiguration)
-				if err != nil {
-					return nil, err
-				}
-			}
-			annotations[controlplanev1.KubeadmClusterConfigurationAnnotation] = clusterConfigurationAnnotation
-		}
+		// Cleanup the KubeadmClusterConfigurationAnnotation annotation that was set in Cluster API <= v1.11.
+		delete(annotations, kubeadmClusterConfigurationAnnotation)
 
 		// If the machine already has remediation data then preserve it.
 		// NOTE: This is required in order to track remediation retries.

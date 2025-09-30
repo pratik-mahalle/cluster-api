@@ -983,6 +983,9 @@ func TestReconcileCertificateExpiries(t *testing.T) {
 
 	cluster := newCluster(&types.NamespacedName{Name: "foo", Namespace: metav1.NamespaceDefault})
 	kcp := &controlplanev1.KubeadmControlPlane{
+		Spec: controlplanev1.KubeadmControlPlaneSpec{
+			Version: "v1.30.0",
+		},
 		Status: controlplanev1.KubeadmControlPlaneStatus{
 			Initialization: controlplanev1.KubeadmControlPlaneInitializationStatus{
 				ControlPlaneInitialized: ptr.To(true),
@@ -1800,7 +1803,7 @@ func TestKubeadmControlPlaneReconciler_syncMachines(t *testing.T) {
 			InfrastructureRef: *infraMachineRef,
 			Version:           "v1.25.3",
 			FailureDomain:     fd,
-			ProviderID:        "provider-id",
+			// ProviderID is intentionally not set here, this field is set by the Machine controller.
 			Deletion: clusterv1.MachineDeletionSpec{
 				NodeDrainTimeoutSeconds:        duration5s,
 				NodeVolumeDetachTimeoutSeconds: duration5s,
@@ -1808,8 +1811,7 @@ func TestKubeadmControlPlaneReconciler_syncMachines(t *testing.T) {
 			},
 		},
 	}
-	// Note: use "manager" as the field owner to mimic the manager used before ClusterAPI v1.4.0.
-	g.Expect(env.Create(ctx, inPlaceMutatingMachine, client.FieldOwner("manager"))).To(Succeed())
+	g.Expect(env.PatchAndWait(ctx, inPlaceMutatingMachine, client.FieldOwner(kcpManagerName))).To(Succeed())
 
 	// Existing machine that is in deleting state
 	deletingMachine := &clusterv1.Machine{
@@ -1842,7 +1844,7 @@ func TestKubeadmControlPlaneReconciler_syncMachines(t *testing.T) {
 			ReadinessGates: mandatoryMachineReadinessGates,
 		},
 	}
-	g.Expect(env.Create(ctx, deletingMachine, client.FieldOwner(classicManager))).To(Succeed())
+	g.Expect(env.PatchAndWait(ctx, deletingMachine, client.FieldOwner(kcpManagerName))).To(Succeed())
 	// Delete the machine to put it in the deleting state
 	g.Expect(env.Delete(ctx, deletingMachine)).To(Succeed())
 	// Wait till the machine is marked for deletion
@@ -2091,13 +2093,13 @@ func TestKubeadmControlPlaneReconciler_syncMachines(t *testing.T) {
 	g.Expect(env.GetAPIReader().Get(ctx, client.ObjectKeyFromObject(updatedDeletingMachine), updatedDeletingMachine)).To(Succeed())
 
 	// Verify ManagedFields
-	g.Expect(updatedDeletingMachine.ManagedFields).ShouldNot(
-		ContainElement(ssa.MatchManagedFieldsEntry(kcpManagerName, metav1.ManagedFieldsOperationApply)),
-		"deleting machine should not contain an entry for SSA manager",
-	)
 	g.Expect(updatedDeletingMachine.ManagedFields).Should(
-		ContainElement(ssa.MatchManagedFieldsEntry("manager", metav1.ManagedFieldsOperationUpdate)),
-		"in-place mutable machine should still contain an entry for old manager",
+		ContainElement(ssa.MatchManagedFieldsEntry(kcpManagerName, metav1.ManagedFieldsOperationApply)),
+		"deleting machine should contain an entry for SSA manager",
+	)
+	g.Expect(updatedDeletingMachine.ManagedFields).ShouldNot(
+		ContainElement(ssa.MatchManagedFieldsEntry(classicManager, metav1.ManagedFieldsOperationUpdate)),
+		"deleting machine should not contain an entry for old manager",
 	)
 
 	// Verify the machine labels and annotations are unchanged.

@@ -248,6 +248,7 @@ func (src *ClusterClass) ConvertTo(dstRaw conversion.Hub) error {
 	dst.Spec.ControlPlane.Deletion.NodeVolumeDetachTimeoutSeconds = restored.Spec.ControlPlane.Deletion.NodeVolumeDetachTimeoutSeconds
 	dst.Spec.ControlPlane.Deletion.NodeDeletionTimeoutSeconds = restored.Spec.ControlPlane.Deletion.NodeDeletionTimeoutSeconds
 	dst.Spec.Workers.MachinePools = restored.Spec.Workers.MachinePools
+	dst.Spec.KubernetesVersions = restored.Spec.KubernetesVersions
 
 	for i := range restored.Spec.Workers.MachineDeployments {
 		dst.Spec.Workers.MachineDeployments[i].HealthCheck = restored.Spec.Workers.MachineDeployments[i].HealthCheck
@@ -262,6 +263,7 @@ func (src *ClusterClass) ConvertTo(dstRaw conversion.Hub) error {
 		dst.Spec.Workers.MachineDeployments[i].Rollout.Strategy = restored.Spec.Workers.MachineDeployments[i].Rollout.Strategy
 	}
 	dst.Status = restored.Status
+	dst.Spec.Upgrade.External.GenerateUpgradePlanExtension = restored.Spec.Upgrade.External.GenerateUpgradePlanExtension
 
 	return nil
 }

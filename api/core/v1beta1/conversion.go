@@ -248,6 +248,10 @@ func (src *ClusterClass) ConvertTo(dstRaw conversion.Hub) error {
 		dst.Status.Variables[i] = variable
 	}
 
+	dst.Spec.KubernetesVersions = restored.Spec.KubernetesVersions
+
+	dst.Spec.Upgrade.External.GenerateUpgradePlanExtension = restored.Spec.Upgrade.External.GenerateUpgradePlanExtension
+
 	return nil
 }
 

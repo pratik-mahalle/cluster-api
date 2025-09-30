@@ -109,6 +109,7 @@ microk8s                BootstrapProvider          https://github.com/canonical/
 rke2                    BootstrapProvider          https://github.com/rancher/cluster-api-provider-rke2/releases/latest/                             bootstrap-components.yaml
 talos                   BootstrapProvider          https://github.com/siderolabs/cluster-api-bootstrap-provider-talos/releases/latest/               bootstrap-components.yaml
 canonical-kubernetes    ControlPlaneProvider       https://github.com/canonical/cluster-api-k8s/releases/latest/                                     control-plane-components.yaml
+hosted-control-plane    ControlPlaneProvider       https://github.com/teutonet/cluster-api-provider-hosted-control-plane/releases/latest/            control-plane-components.yaml
 k0sproject-k0smotron    ControlPlaneProvider       https://github.com/k0sproject/k0smotron/releases/latest/                                          control-plane-components.yaml
 kamaji                  ControlPlaneProvider       https://github.com/clastix/cluster-api-control-plane-provider-kamaji/releases/latest/             control-plane-components.yaml
 kubeadm                 ControlPlaneProvider       https://github.com/kubernetes-sigs/cluster-api/releases/latest/                                   control-plane-components.yaml
@@ -154,6 +155,7 @@ virtink                 InfrastructureProvider     https://github.com/smartxwork
 vsphere                 InfrastructureProvider     https://github.com/kubernetes-sigs/cluster-api-provider-vsphere/releases/latest/                  infrastructure-components.yaml
 vultr-vultr             InfrastructureProvider     https://github.com/vultr/cluster-api-provider-vultr/releases/latest/                              infrastructure-components.yaml
 in-cluster              IPAMProvider               https://github.com/kubernetes-sigs/cluster-api-ipam-provider-in-cluster/releases/latest/          ipam-components.yaml
+metal3                  IPAMProvider               https://github.com/metal3-io/ip-address-manager/releases/latest/                                  ipam-components.yaml
 nutanix                 IPAMProvider               https://github.com/nutanix-cloud-native/cluster-api-ipam-provider-nutanix/releases/latest/        ipam-components.yaml
 nutanix                 RuntimeExtensionProvider   https://github.com/nutanix-cloud-native/cluster-api-runtime-extensions-nutanix/releases/latest/   runtime-extensions-components.yaml
 eitco-cdk8s             AddonProvider              https://github.com/eitco/cluster-api-addon-provider-cdk8s/releases/latest/                        addon-components.yaml
@@ -201,6 +203,10 @@ var expectedOutputYaml = `- File: core_components.yaml
   Name: canonical-kubernetes
   ProviderType: ControlPlaneProvider
   URL: https://github.com/canonical/cluster-api-k8s/releases/latest/
+- File: control-plane-components.yaml
+  Name: hosted-control-plane
+  ProviderType: ControlPlaneProvider
+  URL: https://github.com/teutonet/cluster-api-provider-hosted-control-plane/releases/latest/
 - File: control-plane-components.yaml
   Name: k0sproject-k0smotron
   ProviderType: ControlPlaneProvider
@@ -381,6 +387,10 @@ var expectedOutputYaml = `- File: core_components.yaml
   Name: in-cluster
   ProviderType: IPAMProvider
   URL: https://github.com/kubernetes-sigs/cluster-api-ipam-provider-in-cluster/releases/latest/
+- File: ipam-components.yaml
+  Name: metal3
+  ProviderType: IPAMProvider
+  URL: https://github.com/metal3-io/ip-address-manager/releases/latest/
 - File: ipam-components.yaml
   Name: nutanix
   ProviderType: IPAMProvider
